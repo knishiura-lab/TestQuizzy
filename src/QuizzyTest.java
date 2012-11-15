@@ -1,6 +1,7 @@
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.openqa.selenium.support.ui.ExpectedConditions.elementToBeClickable;
 import static org.openqa.selenium.support.ui.ExpectedConditions.visibilityOfElementLocated;
 
 import org.junit.AfterClass;
@@ -20,23 +21,47 @@ import org.openqa.selenium.support.ui.WebDriverWait;
  * @author Kazuki Nishiura
  */
 public class QuizzyTest {
+	private static final boolean calcCoverage = true;
 	private static WebDriver driver;
 	private static long WAIT_LIMIT_SEC = 2;
 	private WebDriverWait wait;
 
 	@BeforeClass
 	static public void setUpBrowser() {
-        driver = new FirefoxDriver();
+        if (LocalSettings.driver == null)
+        	driver = new FirefoxDriver();
+        else
+        	driver = LocalSettings.driver;
 	}
 
 	@AfterClass
 	static public void terminateBrowser() {
-		driver.close();
+		if (LocalSettings.driver == null)
+			driver.close();
+		else
+			;
 	}
 
 	@Before
 	public void setup() {
-        driver.get(LocalSettings.TARGET_WEB_PAGE_URL);
+		if (calcCoverage) {
+			driver.switchTo().defaultContent();
+			if (!LocalSettings.JS_COVERAGE_FRONT_PAGE_URL.equals(driver.getCurrentUrl())) {
+				driver.get(LocalSettings.JS_COVERAGE_FRONT_PAGE_URL);
+				WebElement location = driver.findElement(By.id("location"));
+				location.clear();
+				location.sendKeys(LocalSettings.JS_COVERAGE_INSTRUMENTED_WEB_PAGE_URL);
+			}
+			for (WebElement elm: driver.findElements(By.tagName("button"))) {
+				if (elm.getText().equals("Open in frame")) {
+					elm.click();
+					break;
+				}
+			}
+			driver.switchTo().frame("browserIframe");
+		} else {
+			driver.get(LocalSettings.TARGET_WEB_PAGE_URL);
+		}
         wait = new WebDriverWait(driver, WAIT_LIMIT_SEC);
 	}
 
@@ -86,7 +111,7 @@ public class QuizzyTest {
 		againButton.click();
 
 		// user can start quiz again
-		wait.until(visibilityOfElementLocated(By.id("quizzy_start_b")));
+		wait.until(elementToBeClickable(By.id("quizzy_start_b")));
 	}
 
 	// test what shouldn't happen acutally do not happen
@@ -114,7 +139,6 @@ public class QuizzyTest {
 		WebElement nextButton
 			= wait.until(visibilityOfElementLocated(By.id("quizzy_q0_foot_nxt")));
 		nextButton.click();
-
 
 		checkButton
 			= wait.until(visibilityOfElementLocated(By.id("quizzy_q1_foot_chk")));
